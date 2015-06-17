@@ -6,7 +6,7 @@ from sklearn.base import BaseEstimator, clone
 from sklearn.grid_search import GridSearchCV
 from sklearn.linear_model import LogisticRegression
 from features import TextFeatureTransformer
-from sklearn.metrics import auc_score
+from sklearn.metrics import roc_auc_score
 import matplotlib.pyplot as plt
 
 from models import build_base_model
@@ -21,7 +21,7 @@ from util import load_data, load_extended_data, write_test, load_test
 from IPython.core.debugger import Tracer
 
 
-tracer = Tracer()
+#tracer = Tracer()
 
 
 class BaggingClassifier(BaseEstimator):
@@ -62,12 +62,12 @@ def apply_models():
     for i, clf in enumerate(models):
         clf.fit(comments, labels)
         probs = clf.predict_proba(comments_test)
-        #print("score: %f" % auc_score(labels_test, probs[:, 1]))
+        #print("score: %f" % roc_auc_score(labels_test, probs[:, 1]))
         probs_common += probs
         write_test(probs[:, 1], "test_prediction_model_%d.csv" % i,
                 ds="impermium_verification_set_.csv")
     probs_common /= 4.
-    #score = auc_score(labels_test, probs_common[:, 1])
+    #score = roc_auc_score(labels_test, probs_common[:, 1])
     #print("combined score: %f" % score)
     write_test(probs_common[:, 1], "test_prediction_combined.csv",
             ds="impermium_verification_set_.csv")
@@ -92,10 +92,10 @@ def eval_model():
             X_test, y_test = comments[test], labels[test]
             clf.fit(X_train, y_train)
             probs = clf.predict_proba(X_test)
-            print("score: %f" % auc_score(y_test, probs[:, 1]))
+            print("score: %f" % roc_auc_score(y_test, probs[:, 1]))
             probs_common += probs
         probs_common /= 4.
-        scores.append(auc_score(y_test, probs_common[:, 1]))
+        scores.append(roc_auc_score(y_test, probs_common[:, 1]))
         print("combined score: %f" % scores[-1])
 
     print(np.mean(scores), np.std(scores))
@@ -108,13 +108,13 @@ def grid_search():
 
     cv = ShuffleSplit(len(comments), n_iterations=10, test_size=0.2)
     grid = GridSearchCV(clf, cv=cv, param_grid=param_grid, verbose=4,
-            n_jobs=12, score_func=auc_score)
+            n_jobs=12, score_func=roc_auc_score)
     grid.fit(comments, labels)
     print(grid.best_score_)
     print(grid.best_params_)
 
-    tracer()
-    cv_scores = grid.scores_
+    #tracer()
+    cv_scores = grid.grid_scores_
     for param in cv_scores.params:
         means, errors = cv_scores.accumulated(param, 'max')
         plt.errorbar(cv_scores.values[param], means, yerr=errors)
@@ -151,8 +151,8 @@ def analyze_output():
     pred = clf.predict(X_test)
     pred_train = clf.predict(X_train)
     probs_train = clf.predict_proba(X_train)
-    print("auc: %f" % auc_score(y_test, probs[:, 1]))
-    print("auc train: %f" % auc_score(y_train, probs_train[:, 1]))
+    print("auc: %f" % roc_auc_score(y_test, probs[:, 1]))
+    print("auc train: %f" % roc_auc_score(y_train, probs_train[:, 1]))
 
     fp_train = np.where(pred_train > y_train)[0]
     fn_train = np.where(pred_train < y_train)[0]
@@ -202,7 +202,7 @@ def analyze_output():
             coef_com[sorting]]).T
         print(blub)
 
-    tracer()
+    #tracer()
 
 
 def explore_features():
@@ -215,8 +215,8 @@ def explore_features():
 
 
 if __name__ == "__main__":
-    #grid_search()
-    #eval_model()
-    #analyze_output()
-    #explore_features()
-    apply_models()
+    grid_search()
+    eval_model()
+    analyze_output()
+    explore_features()
+    #apply_models()
